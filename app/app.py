@@ -8,106 +8,105 @@ def init_db():
 
     # ---------- USERS TABLE ----------
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            password TEXT,
-            role TEXT
-        )
+    CREATE TABLE IF NOT EXISTS users (
+        username TEXT PRIMARY KEY,
+        password TEXT,
+        role TEXT
+    )
     """)
 
-    # Default admin
+    # default admin
     cur.execute("""
-        INSERT OR IGNORE INTO users (username, password, role)
-        VALUES ('admin','admin','Admin')
+    INSERT OR IGNORE INTO users (username, password, role)
+    VALUES ('admin','admin','Admin')
     """)
-
-    # ---------- CHECK & RESET CLIENTS TABLE ----------
-    cur.execute("""
-        SELECT name FROM sqlite_master
-        WHERE type='table' AND name='clients'
-    """)
-    exists = cur.fetchone() is not None
-
-    if exists:
-        cur.execute("PRAGMA table_info(clients)")
-        cols = [row[1] for row in cur.fetchall()]
-
-        required = {
-            "id", "name", "age", "height", "weight",
-            "program", "calories",
-            "target_weight", "target_adherence",
-            "membership_expiry"   # 🔥 NEW
-        }
-
-        if not required.issubset(set(cols)):
-            cur.execute("DROP TABLE clients")
 
     # ---------- CLIENTS TABLE ----------
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS clients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            age INTEGER,
-            height REAL,
-            weight REAL,
-            program TEXT,
-            calories INTEGER,
-            target_weight REAL,
-            target_adherence INTEGER,
-            membership_expiry TEXT
-        )
+    CREATE TABLE IF NOT EXISTS clients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,
+        age INTEGER,
+        height REAL,
+        weight REAL,
+        program TEXT,
+        calories INTEGER,
+        target_weight REAL,
+        target_adherence INTEGER,
+        membership_status TEXT,
+        membership_end TEXT
+    )
     """)
+
+    # 🔥 SAFE MIGRATION (important)
+    cur.execute("PRAGMA table_info(clients)")
+    cols = [row[1] for row in cur.fetchall()]
+
+    def add_column(col_def):
+        try:
+            cur.execute(f"ALTER TABLE clients ADD COLUMN {col_def}")
+        except:
+            pass  # already exists
+
+    if "height" not in cols:
+        add_column("height REAL")
+    if "target_weight" not in cols:
+        add_column("target_weight REAL")
+    if "target_adherence" not in cols:
+        add_column("target_adherence INTEGER")
+    if "membership_status" not in cols:
+        add_column("membership_status TEXT DEFAULT 'Active'")
+    if "membership_end" not in cols:
+        add_column("membership_end TEXT")
 
     # ---------- PROGRESS TABLE ----------
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS progress (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_name TEXT,
-            week TEXT,
-            adherence INTEGER
-        )
+    CREATE TABLE IF NOT EXISTS progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT,
+        week TEXT,
+        adherence INTEGER
+    )
     """)
 
     # ---------- WORKOUTS TABLE ----------
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS workouts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_name TEXT,
-            date TEXT,
-            workout_type TEXT,
-            duration_min INTEGER,
-            notes TEXT
-        )
+    CREATE TABLE IF NOT EXISTS workouts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT,
+        date TEXT,
+        workout_type TEXT,
+        duration_min INTEGER,
+        notes TEXT
+    )
     """)
 
     # ---------- EXERCISES TABLE ----------
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS exercises (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            workout_id INTEGER,
-            name TEXT,
-            sets INTEGER,
-            reps INTEGER,
-            weight REAL
-        )
+    CREATE TABLE IF NOT EXISTS exercises (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        workout_id INTEGER,
+        name TEXT,
+        sets INTEGER,
+        reps INTEGER,
+        weight REAL
+    )
     """)
 
     # ---------- METRICS TABLE ----------
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS metrics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_name TEXT,
-            date TEXT,
-            weight REAL,
-            waist REAL,
-            bodyfat REAL
-        )
+    CREATE TABLE IF NOT EXISTS metrics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT,
+        date TEXT,
+        weight REAL,
+        waist REAL,
+        bodyfat REAL
+    )
     """)
 
     conn.commit()
     conn.close()
-
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
