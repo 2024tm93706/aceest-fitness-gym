@@ -48,7 +48,8 @@ L: Grilled Chicken + Brown Rice
 D: Fish Curry + Millet Roti
 Target: 2,000 kcal""",
         "color": "#e74c3c",
-        "calorie_factor": 22
+        "calorie_factor": 22,
+        "factor": 22
     },
     "muscle-gain": {
         "name": "Muscle Gain (MG)",
@@ -63,7 +64,8 @@ L: Chicken Biryani (250g Chicken)
 D: Mutton Curry + Jeera Rice
 Target: 3,200 kcal""",
         "color": "#2ecc71",
-        "calorie_factor": 35
+        "calorie_factor": 35,
+        "factor": 35
     },
     "beginner": {
         "name": "Beginner (BG)",
@@ -72,7 +74,8 @@ Focus: Technique Mastery & Form (90% Threshold)""",
         "diet": """Balanced Tamil Meals: Idli-Sambar, Rice-Dal, Chapati
 Protein: 120g/day""",
         "color": "#3498db",
-        "calorie_factor": 26
+        "calorie_factor": 26,
+        "factor": 26
     }
 }
 
