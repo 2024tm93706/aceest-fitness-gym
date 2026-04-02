@@ -25,3 +25,18 @@ def test_invalid_program():
     client = app.test_client()
     response = client.get("/programs/invalid")
     assert response.status_code == 404
+
+def test_calorie_calculation():
+    client = app.test_client()
+    response = client.get("/calculate-calories/fat-loss/70")
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["estimated_calories"] == 1540
+
+
+def test_invalid_program_calories():
+    client = app.test_client()
+    response = client.get("/calculate-calories/invalid/70")
+
+    assert response.status_code == 404
