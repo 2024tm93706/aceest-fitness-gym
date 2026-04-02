@@ -6,17 +6,22 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
+    # ---------- CLIENTS TABLE ----------
     cur.execute("""
         CREATE TABLE IF NOT EXISTS clients (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE,
             age INTEGER,
+            height REAL,
             weight REAL,
             program TEXT,
-            calories INTEGER
+            calories INTEGER,
+            target_weight REAL,
+            target_adherence INTEGER
         )
     """)
 
+    # ---------- PROGRESS TABLE ----------
     cur.execute("""
         CREATE TABLE IF NOT EXISTS progress (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,14 +31,50 @@ def init_db():
         )
     """)
 
+    # ---------- WORKOUTS TABLE ----------
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS workouts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT,
+            date TEXT,
+            workout_type TEXT,
+            duration_min INTEGER,
+            notes TEXT
+        )
+    """)
+
+    # ---------- EXERCISES TABLE ----------
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS exercises (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workout_id INTEGER,
+            name TEXT,
+            sets INTEGER,
+            reps INTEGER,
+            weight REAL
+        )
+    """)
+
+    # ---------- METRICS TABLE ----------
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT,
+            date TEXT,
+            weight REAL,
+            waist REAL,
+            bodyfat REAL
+        )
+    """)
+
     conn.commit()
     conn.close()
-
-init_db()
 
 from flask import Flask, jsonify
 
 app = Flask(__name__)
+
+init_db()
 
 programs = {
     "fat-loss": {
@@ -224,6 +265,113 @@ def get_progress(name):
         "client": name,
         "progress": data
     })
+
+@app.route("/workouts", methods=["POST"])
+def log_workout():
+    from flask import request
+
+    data = request.get_json()
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO workouts (client_name, date, workout_type, duration_min, notes)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        data["name"],
+        data["date"],
+        data["type"],
+        data["duration"],
+        data.get("notes", "")
+    ))
+
+    workout_id = cur.lastrowid
+
+    if "exercise" in data:
+        ex = data["exercise"]
+        cur.execute("""
+            INSERT INTO exercises (workout_id, name, sets, reps, weight)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            workout_id,
+            ex["name"],
+            ex["sets"],
+            ex["reps"],
+            ex["weight"]
+        ))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Workout logged"}), 201
+
+@app.route("/metrics", methods=["POST"])
+def log_metrics():
+    from flask import request
+
+    data = request.get_json()
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO metrics (client_name, date, weight, waist, bodyfat)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        data["name"],
+        data["date"],
+        data.get("weight"),
+        data.get("waist"),
+        data.get("bodyfat")
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Metrics logged"}), 201
+
+@app.route("/workouts/<name>")
+def get_workouts(name):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT date, workout_type, duration_min, notes
+        FROM workouts
+        WHERE client_name=?
+        ORDER BY date DESC
+    """, (name,))
+
+    rows = cur.fetchall()
+    conn.close()
+
+    return jsonify([
+        {
+            "date": r[0],
+            "type": r[1],
+            "duration": r[2],
+            "notes": r[3]
+        }
+        for r in rows
+    ])
+
+@app.route("/bmi/<name>")
+def get_bmi(name):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT height, weight FROM clients WHERE name=?", (name,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row or not row[0] or not row[1]:
+        return jsonify({"error": "Missing data"}), 400
+
+    height_m = row[0] / 100
+    bmi = round(row[1] / (height_m ** 2), 1)
+
+    return jsonify({"bmi": bmi})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

@@ -88,3 +88,43 @@ def test_get_progress():
     if res.status_code == 200:
         data = res.get_json()
         assert "progress" in data
+
+def test_log_workout():
+    client = app.test_client()
+
+    res = client.post("/workouts", json={
+        "name": "Alice",
+        "date": "2026-04-01",
+        "type": "Strength",
+        "duration": 60
+    })
+
+    assert res.status_code == 201
+
+
+def test_log_metrics():
+    client = app.test_client()
+
+    res = client.post("/metrics", json={
+        "name": "Alice",
+        "date": "2026-04-01",
+        "weight": 70
+    })
+
+    assert res.status_code == 201
+
+
+def test_get_workouts():
+    client = app.test_client()
+
+    res = client.get("/workouts/Alice")
+
+    assert res.status_code == 200
+
+
+def test_bmi():
+    client = app.test_client()
+
+    res = client.get("/bmi/Alice")
+
+    assert res.status_code in [200, 400]
