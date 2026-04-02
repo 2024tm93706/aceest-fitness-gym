@@ -40,3 +40,33 @@ def test_invalid_program_calories():
     response = client.get("/calculate-calories/invalid/70")
 
     assert response.status_code == 404
+
+def test_save_client():
+    client = app.test_client()
+
+    response = client.post("/clients", json={
+        "name": "John",
+        "age": 25,
+        "weight": 70,
+        "program": "fat-loss",
+        "adherence": 80,
+        "notes": "Good progress"
+    })
+
+    assert response.status_code == 201
+
+
+def test_get_clients():
+    client = app.test_client()
+    response = client.get("/clients")
+
+    assert response.status_code == 200
+    assert isinstance(response.get_json(), list)
+
+
+def test_export_clients():
+    client = app.test_client()
+    response = client.get("/clients/export")
+
+    # Could be 200 or 400 depending on data
+    assert response.status_code in [200, 400]
