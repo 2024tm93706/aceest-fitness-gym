@@ -1,3 +1,36 @@
+import sqlite3
+
+DB_NAME = "aceest_fitness.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS clients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            age INTEGER,
+            weight REAL,
+            program TEXT,
+            calories INTEGER
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS progress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT,
+            week TEXT,
+            adherence INTEGER
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+init_db()
+
 from flask import Flask, jsonify
 
 app = Flask(__name__)
@@ -42,8 +75,6 @@ Protein: 120g/day""",
         "calorie_factor": 26
     }
 }
-
-clients = []
 
 @app.route("/")
 def home():
@@ -91,53 +122,77 @@ def save_client():
 
     data = request.get_json()
 
-    required_fields = ["name", "age", "weight", "program", "adherence", "notes"]
+    required = ["name", "age", "weight", "program"]
 
-    for field in required_fields:
-        if field not in data:
-            return jsonify({"error": f"{field} is required"}), 400
+    for f in required:
+        if f not in data:
+            return jsonify({"error": f"{f} required"}), 400
 
     if data["program"] not in programs:
         return jsonify({"error": "Invalid program"}), 400
 
-    client = {
-        "name": data["name"],
-        "age": data["age"],
-        "weight": data["weight"],
-        "program": data["program"],
-        "adherence": data["adherence"],
-        "notes": data["notes"]
-    }
+    calorie_factor = programs[data["program"]]["calorie_factor"]
+    calories = int(data["weight"] * calorie_factor)
 
-    clients.append(client)
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
 
-    return jsonify({"message": "Client saved", "client": client}), 201
+    cur.execute("""
+        INSERT OR REPLACE INTO clients
+        (name, age, weight, program, calories)
+        VALUES (?, ?, ?, ?, ?)
+    """, (data["name"], data["age"], data["weight"], data["program"], calories))
 
-@app.route("/clients")
-def get_clients():
-    return jsonify(clients)
+    conn.commit()
+    conn.close()
 
-@app.route("/clients/export")
-def export_clients():
-    import csv
-    from flask import Response
-    from io import StringIO
+    return jsonify({"message": "Client saved"}), 201
 
-    if not clients:
-        return jsonify({"error": "No clients to export"}), 400
+@app.route("/clients/<name>")
+def load_client(name):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
 
-    si = StringIO()
-    writer = csv.writer(si)
+    cur.execute("SELECT name, age, weight, program, calories FROM clients WHERE name=?", (name,))
+    row = cur.fetchone()
 
-    writer.writerow(["Name", "Age", "Weight", "Program", "Adherence", "Notes"])
+    conn.close()
 
-    for c in clients:
-        writer.writerow([
-            c["name"], c["age"], c["weight"],
-            c["program"], c["adherence"], c["notes"]
-        ])
+    if not row:
+        return jsonify({"error": "Client not found"}), 404
 
-    return Response(si.getvalue(), mimetype="text/csv")
+    return jsonify({
+        "name": row[0],
+        "age": row[1],
+        "weight": row[2],
+        "program": row[3],
+        "calories": row[4]
+    })
+
+@app.route("/progress", methods=["POST"])
+def save_progress():
+    from flask import request
+    from datetime import datetime
+
+    data = request.get_json()
+
+    if "name" not in data or "adherence" not in data:
+        return jsonify({"error": "Missing fields"}), 400
+
+    week = datetime.now().strftime("Week %U - %Y")
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO progress (client_name, week, adherence)
+        VALUES (?, ?, ?)
+    """, (data["name"], week, data["adherence"]))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Progress saved"}), 201
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
