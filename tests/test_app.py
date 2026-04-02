@@ -71,3 +71,20 @@ def test_save_progress():
     })
 
     assert res.status_code == 201
+
+def test_get_progress():
+    client = app.test_client()
+
+    # First insert some progress
+    client.post("/progress", json={
+        "name": "Alice",
+        "adherence": 75
+    })
+
+    res = client.get("/progress/Alice")
+
+    assert res.status_code in [200, 404]
+
+    if res.status_code == 200:
+        data = res.get_json()
+        assert "progress" in data

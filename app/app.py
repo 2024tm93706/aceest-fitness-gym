@@ -197,5 +197,33 @@ def save_progress():
 
     return jsonify({"message": "Progress saved"}), 201
 
+@app.route("/progress/<name>")
+def get_progress(name):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT week, adherence
+        FROM progress
+        WHERE client_name=?
+        ORDER BY id
+    """, (name,))
+
+    rows = cur.fetchall()
+    conn.close()
+
+    if not rows:
+        return jsonify({"error": "No progress data"}), 404
+
+    data = [
+        {"week": r[0], "adherence": r[1]}
+        for r in rows
+    ]
+
+    return jsonify({
+        "client": name,
+        "progress": data
+    })
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
