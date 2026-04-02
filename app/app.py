@@ -6,7 +6,23 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
-    # ---------- CHECK & RESET CLIENTS TABLE IF SCHEMA CHANGED ----------
+    # ---------- USERS TABLE ----------
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password TEXT,
+            role TEXT
+        )
+    """)
+
+    # Default admin
+    cur.execute("""
+        INSERT OR IGNORE INTO users (username, password, role)
+        VALUES ('admin','admin','Admin')
+    """)
+
+    # ---------- CHECK & RESET CLIENTS TABLE ----------
     cur.execute("""
         SELECT name FROM sqlite_master
         WHERE type='table' AND name='clients'
@@ -20,7 +36,8 @@ def init_db():
         required = {
             "id", "name", "age", "height", "weight",
             "program", "calories",
-            "target_weight", "target_adherence"
+            "target_weight", "target_adherence",
+            "membership_expiry"   # 🔥 NEW
         }
 
         if not required.issubset(set(cols)):
@@ -37,7 +54,8 @@ def init_db():
             program TEXT,
             calories INTEGER,
             target_weight REAL,
-            target_adherence INTEGER
+            target_adherence INTEGER,
+            membership_expiry TEXT
         )
     """)
 
@@ -383,6 +401,76 @@ def get_bmi(name):
         "name": name,
         "bmi": bmi
     })
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT role FROM users
+        WHERE username=? AND password=?
+    """, (data["username"], data["password"]))
+
+    row = cur.fetchone()
+    conn.close()
+
+    if row:
+        return jsonify({
+            "message": "Login successful",
+            "role": row[0]
+        })
+
+    return jsonify({"error": "Invalid credentials"}), 401
+
+@app.route("/generate-program/<name>")
+def generate_program(name):
+    import random
+
+    exercises = ["Squat", "Deadlift", "Bench Press", "Pull-Up", "Push-Up"]
+
+    plan = []
+    for day in ["Mon", "Tue", "Wed"]:
+        plan.append({
+            "day": day,
+            "exercise": random.choice(exercises),
+            "sets": random.randint(3, 5),
+            "reps": random.randint(8, 12)
+        })
+
+    return jsonify({
+        "client": name,
+        "program": plan
+    })
+
+@app.route("/export/<name>")
+def export_pdf(name):
+    from fpdf import FPDF
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM clients WHERE name=?", (name,))
+    row = cur.fetchone()
+
+    if not row:
+        return jsonify({"error": "Client not found"}), 404
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    pdf.cell(200, 10, txt=f"Client Report: {name}", ln=True)
+
+    pdf.cell(200, 10, txt=f"Age: {row[2]}", ln=True)
+    pdf.cell(200, 10, txt=f"Weight: {row[4]}", ln=True)
+
+    filename = f"{name}.pdf"
+    pdf.output(filename)
+
+    return jsonify({"message": f"{filename} generated"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

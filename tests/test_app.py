@@ -128,3 +128,27 @@ def test_bmi():
     res = client.get("/bmi/Alice")
 
     assert res.status_code in [200, 400]
+
+def test_login():
+    client = app.test_client()
+
+    res = client.post("/login", json={
+        "username": "admin",
+        "password": "admin"
+    })
+
+    assert res.status_code == 200
+
+
+def test_generate_program():
+    client = app.test_client()
+
+    res = client.get("/generate-program/Alice")
+    assert res.status_code == 200
+
+
+def test_export_pdf():
+    client = app.test_client()
+
+    res = client.get("/export/Alice")
+    assert res.status_code in [200, 404]
