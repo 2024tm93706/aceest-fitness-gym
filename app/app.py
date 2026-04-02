@@ -6,6 +6,26 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
+    # ---------- CHECK & RESET CLIENTS TABLE IF SCHEMA CHANGED ----------
+    cur.execute("""
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='clients'
+    """)
+    exists = cur.fetchone() is not None
+
+    if exists:
+        cur.execute("PRAGMA table_info(clients)")
+        cols = [row[1] for row in cur.fetchall()]
+
+        required = {
+            "id", "name", "age", "height", "weight",
+            "program", "calories",
+            "target_weight", "target_adherence"
+        }
+
+        if not required.issubset(set(cols)):
+            cur.execute("DROP TABLE clients")
+
     # ---------- CLIENTS TABLE ----------
     cur.execute("""
         CREATE TABLE IF NOT EXISTS clients (
@@ -70,7 +90,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
@@ -268,9 +288,7 @@ def get_progress(name):
 
 @app.route("/workouts", methods=["POST"])
 def log_workout():
-    from flask import request
-
-    data = request.get_json()
+    data = request.json
 
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -286,21 +304,6 @@ def log_workout():
         data.get("notes", "")
     ))
 
-    workout_id = cur.lastrowid
-
-    if "exercise" in data:
-        ex = data["exercise"]
-        cur.execute("""
-            INSERT INTO exercises (workout_id, name, sets, reps, weight)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            workout_id,
-            ex["name"],
-            ex["sets"],
-            ex["reps"],
-            ex["weight"]
-        ))
-
     conn.commit()
     conn.close()
 
@@ -308,9 +311,7 @@ def log_workout():
 
 @app.route("/metrics", methods=["POST"])
 def log_metrics():
-    from flask import request
-
-    data = request.get_json()
+    data = request.json
 
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -330,7 +331,6 @@ def log_metrics():
     conn.close()
 
     return jsonify({"message": "Metrics logged"}), 201
-
 @app.route("/workouts/<name>")
 def get_workouts(name):
     conn = sqlite3.connect(DB_NAME)
@@ -361,17 +361,28 @@ def get_bmi(name):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
-    cur.execute("SELECT height, weight FROM clients WHERE name=?", (name,))
+    cur.execute("""
+        SELECT height, weight FROM clients WHERE name=?
+    """, (name,))
+
     row = cur.fetchone()
     conn.close()
 
-    if not row or not row[0] or not row[1]:
-        return jsonify({"error": "Missing data"}), 400
+    if not row:
+        return jsonify({"error": "Client not found"}), 404
 
-    height_m = row[0] / 100
-    bmi = round(row[1] / (height_m ** 2), 1)
+    height, weight = row
 
-    return jsonify({"bmi": bmi})
+    if not height or not weight:
+        return jsonify({"error": "Insufficient data"}), 400
+
+    h = height / 100
+    bmi = round(weight / (h * h), 1)
+
+    return jsonify({
+        "name": name,
+        "bmi": bmi
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
