@@ -7,12 +7,6 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/2024tm93706/aceest-fitness-gym.git'
-            }
-        }
-
         stage('Install & Test') {
             steps {
                 sh 'pip install -r requirements.txt'
@@ -20,13 +14,21 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Docker') {
             steps {
                 sh 'docker build -t $IMAGE:$BUILD_NUMBER -f docker/Dockerfile .'
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Login to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh 'echo $PASS | docker login -u $USER --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Docker') {
             steps {
                 sh 'docker push $IMAGE:$BUILD_NUMBER'
             }
