@@ -6,7 +6,7 @@ spec:
   type: NodePort
   selector:
     app: aceest
-    version: blue
+    version: green
   ports:
     - port: 80
       targetPort: 5000
