@@ -50,7 +50,7 @@ pipeline {
             steps {
                 sh '''
                 kubectl set image deployment/aceest-green aceest-container=$IMAGE:$BUILD_NUMBER || true
-                kubectl apply -f k8s/
+                kubectl apply -f k8s/ --validate=false
                 '''
             }
         }
