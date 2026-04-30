@@ -7,21 +7,11 @@ pipeline {
 
     stages {
 
-        stage('Install & Test') {
+        stage('Test') {
             steps {
                 sh '''
-                apt-get update
-                apt-get update
-                apt-get install -y python3 python3-pip python3-venv curl
-
-                # install kubectl
-                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl"
-                install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-
-                python3 -m venv venv
-                . venv/bin/activate
-                pip install -r requirements.txt
-                pytest
+                docker build -t $IMAGE:test -f docker/Dockerfile .
+                docker run --rm $IMAGE:test pytest
                 '''
             }
         }
@@ -49,8 +39,8 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                kubectl set image deployment/aceest-green aceest-container=$IMAGE:$BUILD_NUMBER || true
-                kubectl apply -f k8s/ --validate=false
+                /usr/local/bin/kubectl set image deployment/aceest-green aceest-container=$IMAGE:$BUILD_NUMBER || true
+                /usr/local/bin/kubectl apply -f k8s/ --validate=false
                 '''
             }
         }
