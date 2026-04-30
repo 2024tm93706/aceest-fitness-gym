@@ -3,10 +3,9 @@ kind: Service
 metadata:
   name: aceest-service
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: aceest
   ports:
     - port: 80
       targetPort: 5000
-      nodePort: 30007
