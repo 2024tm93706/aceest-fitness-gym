@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: aceest-container
-        image: 2024tm93706/aceest-fitness-gym:v1
+        image: 2024tm93706/aceest-fitness-gym:v1.1
         ports:
         - containerPort: 5000
