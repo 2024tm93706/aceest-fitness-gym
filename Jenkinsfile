@@ -11,7 +11,12 @@ pipeline {
             steps {
                 sh '''
                 apt-get update
-                apt-get install -y python3 python3-pip python3-venv
+                apt-get update
+                apt-get install -y python3 python3-pip python3-venv curl
+
+                # install kubectl
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl"
+                install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
                 python3 -m venv venv
                 . venv/bin/activate
