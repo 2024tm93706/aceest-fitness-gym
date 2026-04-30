@@ -1,0 +1,15 @@
+.git
+.github
+venv
+__pycache__
+*.pyc
+.pytest_cache
+*.log
+.env
+.DS_Store
+.idea
+.vscode
+k8s
+docker/jenkins
+kubeconfig*
+*.kubeconfig

@@ -22,3 +22,7 @@ __pycache__/
 
 # Logs
 *.log
+
+# Local Kubernetes credentials (never commit)
+kubeconfig*
+*.kubeconfig

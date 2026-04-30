@@ -19,7 +19,7 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
 # Give Jenkins access to Docker socket
 RUN usermod -aG docker jenkins
 
-# 🔥 IMPORTANT: fix docker permissions
+# Fix docker socket permissions (socket may not exist at build time)
 RUN chmod 666 /var/run/docker.sock || true
 
 USER jenkins
