@@ -16,7 +16,7 @@ pipeline {
 
         stage('Build Docker') {
             steps {
-                sh 'docker build -t aceest-fitness .'
+                sh 'docker build -t aceest-fitness -f docker/Dockerfile .'
             }
         }
     }

@@ -41,10 +41,10 @@ python -m pytest
 ## Docker Usage
 
 ```bash
-docker build -t aceest-gym .
+docker build -t aceest-fitness -f docker/Dockerfile .
 docker run -p 5001:5000 aceest-gym
 ```
-## CI/CD Pipeline 
+## CI/CD Pipeline
 
 The GitHub Actions pipeline is triggered on every push and pull request. It performs:
 	•	Dependency installation
@@ -61,14 +61,14 @@ Jenkins is configured to:
 ## Pipeline Flow
 Every code push automatically triggers testing and Docker build via GitHub Actions, followed by Jenkins build validation.
 
-## Screenshots 
+## Screenshots
 
 # App running within docker
 <img width="1326" height="459" alt="Screenshot 2026-04-02 at 12 08 34 PM" src="https://github.com/user-attachments/assets/e31b9802-b6cf-4d75-ae99-17fd38186e72" />
 
 <img width="433" height="122" alt="Screenshot 2026-04-02 at 12 05 47 PM" src="https://github.com/user-attachments/assets/f4014eda-d88d-493a-8fe3-a50aa8226914" />
 
-# Github actions success 
+# Github actions success
 <img width="1340" height="238" alt="Screenshot 2026-04-02 at 12 06 49 PM" src="https://github.com/user-attachments/assets/b62f3bdf-3392-4b1c-bf18-61529cd41fbd" />
 
 <img width="1198" height="752" alt="Screenshot 2026-04-02 at 12 07 26 PM" src="https://github.com/user-attachments/assets/490b5811-84a0-4faa-b2e0-2f8dfa555226" />
