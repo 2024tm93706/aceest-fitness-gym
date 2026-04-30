@@ -24,4 +24,4 @@ jobs:
       run: python -m pytest
 
     - name: Build Docker image
-      run: docker build -t aceest-gym .
+      run: docker build -t aceest-gym -f docker/Dockerfile .
