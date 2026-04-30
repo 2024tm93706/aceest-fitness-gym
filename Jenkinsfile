@@ -2,20 +2,10 @@ pipeline {
     agent any
 
     environment {
-        IMAGE = "2024tm93706/aceest-fitness-gym"
+        IMAGE_NAME = "aceest-fitness-gym:latest"
     }
 
     stages {
-
-        stage('Clean') {
-
-            steps {
-
-                deleteDir()
-
-            }
-
-        }
 
         stage('Checkout') {
             steps {
@@ -23,42 +13,52 @@ pipeline {
             }
         }
 
-        stage('Test') {
+        stage('Build Image (Minikube Docker)') {
             steps {
                 sh '''
-                docker build -t $IMAGE:test -f docker/Dockerfile .
-                docker run --rm $IMAGE:test pytest
+                echo "Switching to Minikube Docker..."
+                eval $(minikube docker-env)
+
+                echo "Building Docker image..."
+                docker build -t $IMAGE_NAME -f docker/Dockerfile .
                 '''
-            }
-        }
-
-        stage('Build Docker') {
-            steps {
-                sh 'docker build -t $IMAGE:$BUILD_NUMBER -f docker/Dockerfile .'
-            }
-        }
-
-        stage('Login to DockerHub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh 'echo $PASS | docker login -u $USER --password-stdin'
-                }
-            }
-        }
-
-        stage('Push Docker') {
-            steps {
-                sh 'docker push $IMAGE:$BUILD_NUMBER'
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                /usr/local/bin/kubectl set image deployment/aceest-green aceest-container=$IMAGE:$BUILD_NUMBER || true
-                /usr/local/bin/kubectl apply -f k8s/ --validate=false
+                echo "Deploying to Kubernetes..."
+
+                kubectl apply -f k8s/
+
+                echo "Updating deployment image..."
+                kubectl set image deployment/aceest-green aceest-container=$IMAGE_NAME || true
+
+                echo "Deployment complete"
                 '''
             }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                echo "Checking pods..."
+                kubectl get pods
+
+                echo "Checking services..."
+                kubectl get svc
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline executed successfully 🚀'
+        }
+        failure {
+            echo 'Pipeline failed ❌'
         }
     }
 }
