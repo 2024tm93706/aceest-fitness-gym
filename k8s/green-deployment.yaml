@@ -19,3 +19,15 @@ spec:
           image: asia-south1-docker.pkg.dev/even-ruler-494913-g4/aceest-repo/app:v3
           ports:
             - containerPort: 5000
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
