@@ -159,7 +159,7 @@ Protein: 120g/day""",
 
 @app.route("/")
 def home():
-    return jsonify({"message": "ACEest Gym API v2 running"})
+    return jsonify({"message": "ACEest Gym API running"})
 
 @app.route("/programs")
 def get_programs():
